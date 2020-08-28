@@ -1,0 +1,238 @@
+---
+title: "A connectivity portfolio effect stabilizes marine reserve performance"
+author: Hugo B. Harrison, Michael Bode, David H. Williamson, Michael L. Berumen, Geoffrey P. Jones
+date: "03/06/2020"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+Correspondence to: hugo.harrison@jcu.edu.au
+
+##Significance statement
+Networks of no-take marine reserves support local fisheries by ensuring a consistent supply of juvenile fish. We measured larval dispersal patterns for a highly exploited coral grouper and quantified temporal fluctuations in the recruitment contribution from a network of no-take marine reserves on the Great Barrier Reef. Although recruitment contributions from individual reserves are extremely variable, the reserve network generates a connectivity portfolio effect that successfully dampens the volatility of larval supply to nearby coral reefs. Our findings demonstrate that effective reserve networks can yield previously unrecognized stabilizing benefits that ensure a consistent replenishment of exploited fish stocks.
+
+```{r setup, echo=FALSE}
+rm(list = ls()) # clear memory
+library(tidyverse)
+library(ggpubr)
+
+theme_PNAS <- theme_classic() + theme(
+        axis.title = element_text(family = "Helvetica", colour="black", size = 7),
+        axis.text = element_text(family = "Helvetica", colour = "black", size = 6),
+        #axis.line = element_line(size = .25),
+        axis.line = element_blank(),
+        axis.ticks = element_line(size = .25),
+        strip.text = element_text(family = "Helvetica", colour = "black", size = 7, face = "bold"),
+        legend.title = element_text(family = "Helvetica", colour = "black", size = 7),
+        legend.text = element_text(family = "Helvetica", colour = "black", size = 6),
+        strip.background = element_rect(colour="white", fill="white"),
+        panel.background = element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(colour = "black", fill=NA, size=.5))
+```
+
+
+##Measuring the performance of marine reserves
+In the context of this study, the performance of a single no-take marine reserve is measured by its relative contribution to local recruitment across all sampled reefs in the island group in each cohort. Since we sampled only a fraction of all reproductively mature adults in each reserve (SI Appendix, Table S2), the observed number of assigned juveniles represents only a fraction of a reserve’s contribution to local recruitment. In order to compare the performance of each reserves across different cohort, we estimated the number of juveniles we would have assigned to each reserve had all adults been sampled in the populations. Since we can assign parentage to father, mothers or both, the relationship between the number assignments and the proportion of parents sampled is non-linear (Harrison et al. 2012, Curr Biol 22(11):1023–1028). The expected recruitment contribution $R$ accounts for the number of assigned juveniles given the proportion of adults sampled from reserve $i$ so that: 
+
+$$R_{i} = \frac{J_{Assigned}}{1 -(1 - {P_{adult}})^2}$$
+Where:
+$R_{i}$ is the expected recruitment contribution of reserve $i$
+$\overline{P_{adult}}$ is the proportion of adults sampled
+$J_{Assigned}$ is the total number of assigned juveniles
+
+
+
+##The performance of marine reserves:
+Import data
+```{r data}
+load("reserve.performance.Rdata")
+reserve.performance
+```
+
+The performance of a single no-take marine reserve is measured by its relative contribution to local recruitment across all sampled reefs in the island group in each cohort. We standardise the expected recruitment contribution $R_{i}$ by the number juveniles sampled in each cohort to estimate the local recruitment contribution of individual reserve and the aggregate network of reserves. 
+
+```{r Figure 2 - Reserve performance}
+#local recruitment contribution of individual reserves to the island group:
+rec.contribution.1 <- reserve.performance %>%  
+  mutate(LRC = Ri / N.juvenile)                
+
+#local recruitment contribution of the aggregate network of reserves to the island group:
+rec.contribution.2 <- rec.contribution.1 %>%  
+  select(Cohort, Reef, LRC) %>% 
+  bind_rows(rec.contribution.1 %>% 
+    group_by(Cohort) %>% summarise(LRC = sum(LRC)) %>%
+  mutate(Reef = "Reserve network")) %>%
+  mutate(Reef = factor(Reef, levels = c("Middle Is.", "Egg Rock", "Halfway Is.", "Clam Bay", "Reserve network")))
+
+#Figure 2A
+Recruitment.plot <- ggplot() +
+  geom_col(data = rec.contribution.1, aes(x = Cohort, y = LRC), fill = "grey80", col = "grey80", width = .7) +
+  geom_line(data = rec.contribution.1, aes(x = Cohort, y = LRC, col = Reef, group = Reef)) +
+  geom_point(data = rec.contribution.1, aes(x = Cohort, y = LRC, col = Reef, group = Reef), size = 1.5) +
+  scale_color_manual(values = c("#E7298A", "#D95F02", "#7570B3", "#1B9E77")) +
+  scale_y_continuous(labels = scales::percent_format(), expand = c(0,0), limits = c(0, .75)) +
+  labs(y = "Percent contribution \nto local recruitment", x = "") +
+  theme_PNAS + 
+  theme(plot.margin = unit(c(2,1,0,6), "mm"), 
+        legend.position = c(.25,.84), legend.background = element_rect(fill = "transparent", colour = NA), 
+        legend.title = element_blank(),legend.key.size = unit(3, 'mm'))
+
+#Figure 2B
+Reserve.performance.plot <- ggplot(rec.contribution.2, aes(y = LRC, x = Reef)) +
+  scale_color_manual(values = c("#E7298A", "#D95F02", "#7570B3", "#1B9E77", "grey20"), guide = FALSE) +
+  scale_fill_manual(values = c(NA, NA, NA, NA, "grey80"), guide = FALSE) +
+  geom_boxplot(aes(col = Reef, fill = Reef), alpha = 1, width = .5, lwd= 0.35, outlier.size = .2) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1), expand = c(0,0), limits = c(0, .75)) +
+  labs(y = "Percent contribution \nto local recruitment", x = "", col = "Cohort") +
+  theme_PNAS + theme(plot.margin = unit(c(2,1,-1,6), "mm"), legend.title = element_blank(),
+        legend.position = c(.15,.75), legend.background = element_rect(fill = "transparent", colour = NA), 
+        legend.key.size = unit(.5, 'lines'), axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+
+#Figure 2
+ggarrange(Recruitment.plot,  Reserve.performance.plot, nrow =1, ncol = 2, align = "h", labels = c("A", "B"), widths = c(1, 1), font.label = list(family = "Helvetica", colour = "black", size =9))
+ggsave("Figure2.pdf", height = 57, width = 114, units = "mm", dpi = 1000)
+```
+
+
+##The connectivity portfolio effect
+
+We correct our estimates of the portfolio effect by accounting for the natural scale-dependence of population processes. In financial systems, the variance in returns scales linearly with the mean return (since every stock yields the same dividend). In ecological systems by contrast, larger populations exhibit lower variability than we would expect from proportional scaling.  Such mean-variance scaling is common across ecological systems and predicts that the temporal variance of individual components (2) increases with the mean value () according to a power-law relationship with exponent z<2 (38, 55). Using the mean-variance exponent fit to the sampled reserves (z=1.87), we predict the average recruitment contribution and variance of a single reserve with a mean output equal to the sum of the mean outputs of the four individual reserves. We compare this predicted variance of this hypothetical single reserve σ_T^2=0.036 to the observed variance of the contributions made by the portfolio of four reserves σ_P^2=0.011, to calculate the strength of the connectivity portfolio effect. We analysed the sensitivity of our results to the definition of cohorts, and found that the results were almost identical.
+
+```{r Mean-Variance portfolio effect}
+#mean, variance and coefficient of variation in the local recruitment contribution of individual reserves
+var.reef = rec.contribution.1 %>% 
+  select(Cohort, Reef, LRC) %>% 
+  group_by(Reef) %>%
+  summarise(var = var(LRC),
+            mean = mean(LRC),
+            cv = sd(LRC)/ abs(mean(LRC))) 
+
+#mean, variance and coefficient of variation in the local recruitment contribution of the aggregate network of reserves
+var.sum = rec.contribution.1 %>% 
+  select(Cohort, Reef, LRC) %>% 
+  group_by(Cohort) %>%
+  summarise(sum = sum(LRC)) %>%
+  summarise(var = var(sum),
+            mean = mean(sum),  #single_asset_mean
+            cv_portfolio = sd(sum) /abs(mean(sum))) 
+
+#Fit linear regression
+fit <- lm(log(var) ~ log(mean), data = var.reef)
+var.sum$pred <- predict(fit, var.sum)
+
+#slope z
+var.sum$z <- coef(fit)[2]
+
+#intercept
+var.sum$intercept  <- coef(fit)[1]
+
+#single reserve variance
+var.sum$exp.var <- exp(var.sum$pred)
+#CV single reserve
+var.sum$cv <- sqrt(var.sum$exp.var) / var.sum$mean
+#Portfolio effect
+var.sum$MV.PE <- var.sum$cv / var.sum$cv_portfolio 
+
+#Simply to determine whether the CPE label is above or below the point
+var.sum$vjust <- sign(var.sum$var - var.sum$exp.var)*-1.7 
+```
+
+```{r Figure 3A}
+CPE.plot <- ggplot(var.reef, aes(y = var, x = mean)) + 
+  geom_segment(data = var.sum, aes(x=mean,xend=mean,y=var,yend=exp.var)) +
+  geom_text(data = var.sum, aes(label=round(MV.PE,1),vjust=vjust), size = 2.5) +
+  geom_text(data = var.sum, aes(x = 0.35, y = 0.001, label= paste("z =",round(z,2))), size =2.5) +
+  geom_smooth(method = "lm", se = F, fullrange = T,  linetype = "dashed", size = .6, col = "grey60") +
+  geom_smooth(method = "lm", se = F, fullrange = F,  linetype = "solid", size = .6, col = "grey60") +
+  geom_point(aes(col = Reef), size = 1.5, alpha = 1) +
+  scale_color_manual(values = c("#E7298A", "#D95F02", "#7570B3", "#1B9E77")) +
+  geom_point(data = var.sum, aes(y = exp.var, x = mean), shape = 21, size = 2, fill = "white") +
+  geom_point(data = var.sum, aes(y = var, x = mean), shape = 18, size = 2) +
+  annotate("text", x = 0.48, y = 0.02, label = "CPE", col = "black", size =2.5, angle = -90, fontface= "bold") +
+  labs(y = expression(Performance~variance~"("~sigma^2~")"), x = expression(Mean~performance~"("~mu~")")) +
+  expand_limits(x = c(NA, 0.5), y = c(NA, 0.1)) +
+  theme_PNAS + 
+  theme(legend.position = c(.25,.85), plot.margin = unit(c(2,1,0,6), "mm"),
+        legend.background = element_rect(fill = "transparent", colour = NA), 
+        legend.title = element_blank(), 
+        legend.key.size = unit(2.5, 'mm'),
+        legend.text = element_text(size = 5),
+        legend.spacing.x = unit(1.0, 'mm')) + 
+  scale_x_continuous(trans='log10', breaks = c(0.1,0.3,0.5)) +
+  scale_y_continuous(trans='log10')
+
+CPE.plot
+```
+
+##Bootstrap resampling protocol
+A bootstrap resampling protocol estimates the volatility in the recruitment contribution of an arbitrary number of reserves. First, we create a set of $n$ reserves by randomly resampling (with replacement) from the observed recruitment contribution timeseries of the reserves in the Keppel Islands (1≤$n$≤20). We repeat this procedure 100 times for each value of $n$ to estimate the mean and standard deviation of the coefficient of variation (CV). This method assumes that recruitment timeseries from additional reserves would have similar correlation structure to those observed in the Keppel Islands.
+
+```{r bootstrap resampling protocol}
+c.var = rec.contribution.1 %>% 
+  select(Cohort, Reef, LRC)
+
+boot.cov = 100  #number of measures of CV
+boot = 10       #number of random samples of LRC
+n.res = 20      #number of arbitrary reserves
+boot.dat <- matrix(nrow = boot, ncol =n.res)
+boot.sim <- matrix(nrow = boot * n.res,  ncol = boot.cov)
+
+for(j in 2:boot.cov){
+#calculate the cumulative proportional contribution of reserves 'boot' times
+for(i in 1:boot){
+boot.dat[i,] <- cumsum(sample(c.var$LRC,n.res,replace = TRUE))
+}
+boot.melt <- gather(as.data.frame(boot.dat))  
+boot.sim[,1] <- boot.melt$key
+boot.sim[,j] <- boot.melt$value
+}
+
+#I've randomly sampled with replacement Local Recruitment Contribution 'boot' times, and measured the cumulative contribution of reserves with 'n.res' reserves. I've done this 'boot.cov' times (which are each column)
+data = as.data.frame(boot.sim) %>%
+  mutate_all(as.character) %>%
+  rename(n.res = V1) %>%
+  mutate(n.res = as.factor(n.res)) %>%
+  mutate_if(is.character, as.numeric)
+
+
+dat.melt <- gather(data, key = "simulations", value = "value", - n.res) %>% mutate(value = as.numeric(value))
+
+dat.melt.2 = dat.melt %>% mutate(simulations = as.factor(simulations)) %>%
+  group_by(simulations, n.res) %>%
+  summarise(cov = sd(value)/abs(mean(value))) %>%
+  mutate(n.res = as.character(n.res),
+         n.res = gsub("V", "", n.res),
+         n.res = as.numeric(n.res)) %>% 
+  group_by(n.res) %>%
+  summarise(mean.cov = mean(cov),
+            sd.cov = sd(cov)) 
+
+volatility.plot = ggplot(dat.melt.2, aes(y = mean.cov, x = n.res)) +   
+  geom_linerange(aes(ymin = mean.cov - sd.cov, ymax = mean.cov + sd.cov), lwd = 0.25) +
+  scale_x_continuous(breaks = c(1,5,10,15,20), labels = c(1,5,10,15,20)) +
+  geom_point(alpha = 1, size = 1) +
+  theme_PNAS + expand_limits(y = c(NA, 0.8)) +
+  labs(x = "Number of reserves",  y = "Volatility (meanCV ± 1SD)") +
+  theme(legend.position = "none", plot.margin = unit(c(2,1,0,6), "mm"))
+```
+1000 bootsraps
+1	0.6605099	0.16241932		
+2	0.4790068	0.10667233		
+3	0.3949614	0.08616241		
+4	0.3426044	0.07540801		
+5	0.3073879	0.06909933		
+6	0.2820170	0.06381506		
+7	0.2611707	0.06081938		
+8	0.2433048	0.05721120		
+9	0.2284567	0.05454674		
+10	0.2166519	0.05126046	
+
+
+
+```{r Figure 3}
+ggarrange(CPE.plot,volatility.plot, nrow =2, ncol = 1, align = "v", labels = c("A", "B"), font.label = list(family = "Helvetica", colour = "black", size =9))
+ggsave("Figure3.pdf", height = 90, width = 49, units = "mm", dpi = 1000)
+```
