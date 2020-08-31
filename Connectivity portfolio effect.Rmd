@@ -1,6 +1,7 @@
 ---
 title: "A connectivity portfolio effect stabilizes marine reserve performance"
-author: Hugo B. Harrison, Michael Bode, David H. Williamson, Michael L. Berumen, Geoffrey P. Jones
+author: Hugo B. Harrison, Michael Bode, David H. Williamson, Michael L. Berumen, Geoffrey
+  P. Jones
 date: "03/06/2020"
 output:
   word_document: default
@@ -9,13 +10,17 @@ output:
 
 Correspondence to: hugo.harrison@jcu.edu.au
 
-##Significance statement
+Also available at: https://github.com/HugoBH/CPE
+
+
+## Significance statement
 Networks of no-take marine reserves support local fisheries by ensuring a consistent supply of juvenile fish. We measured larval dispersal patterns for a highly exploited coral grouper and quantified temporal fluctuations in the recruitment contribution from a network of no-take marine reserves on the Great Barrier Reef. Although recruitment contributions from individual reserves are extremely variable, the reserve network generates a connectivity portfolio effect that successfully dampens the volatility of larval supply to nearby coral reefs. Our findings demonstrate that effective reserve networks can yield previously unrecognized stabilizing benefits that ensure a consistent replenishment of exploited fish stocks.
 
-```{r setup, echo=FALSE}
+```{r setup, message=F}
 rm(list = ls()) # clear memory
 library(tidyverse)
 library(ggpubr)
+library(knitr)
 
 theme_PNAS <- theme_classic() + theme(
         axis.title = element_text(family = "Helvetica", colour="black", size = 7),
@@ -34,27 +39,31 @@ theme_PNAS <- theme_classic() + theme(
 ```
 
 
-##Measuring the performance of marine reserves
+## Measuring the performance of marine reserves
 In the context of this study, the performance of a single no-take marine reserve is measured by its relative contribution to local recruitment across all sampled reefs in the island group in each cohort. Since we sampled only a fraction of all reproductively mature adults in each reserve (SI Appendix, Table S2), the observed number of assigned juveniles represents only a fraction of a reserve’s contribution to local recruitment. In order to compare the performance of each reserves across different cohort, we estimated the number of juveniles we would have assigned to each reserve had all adults been sampled in the populations. Since we can assign parentage to father, mothers or both, the relationship between the number assignments and the proportion of parents sampled is non-linear (Harrison et al. 2012, Curr Biol 22(11):1023–1028). The expected recruitment contribution $R$ accounts for the number of assigned juveniles given the proportion of adults sampled from reserve $i$ so that: 
 
 $$R_{i} = \frac{J_{Assigned}}{1 -(1 - {P_{adult}})^2}$$
+
 Where:
 $R_{i}$ is the expected recruitment contribution of reserve $i$
-$\overline{P_{adult}}$ is the proportion of adults sampled
+
+${P_{adult}}$ is the proportion of adults sampled
+
 $J_{Assigned}$ is the total number of assigned juveniles
 
 
 
-##The performance of marine reserves:
-Import data
-```{r data}
+## The performance of marine reserves:
+
+Import the data
+```{r data, message=F}
 load("reserve.performance.Rdata")
-reserve.performance
+reserve.performance %>% kable()
 ```
 
 The performance of a single no-take marine reserve is measured by its relative contribution to local recruitment across all sampled reefs in the island group in each cohort. We standardise the expected recruitment contribution $R_{i}$ by the number juveniles sampled in each cohort to estimate the local recruitment contribution of individual reserve and the aggregate network of reserves. 
 
-```{r Figure 2 - Reserve performance}
+```{r Figure 2 - Reserve performance, message=F}
 #local recruitment contribution of individual reserves to the island group:
 rec.contribution.1 <- reserve.performance %>%  
   mutate(LRC = Ri / N.juvenile)                
@@ -97,11 +106,11 @@ ggsave("Figure2.pdf", height = 57, width = 114, units = "mm", dpi = 1000)
 ```
 
 
-##The connectivity portfolio effect
+## The connectivity portfolio effect
 
-We correct our estimates of the portfolio effect by accounting for the natural scale-dependence of population processes. In financial systems, the variance in returns scales linearly with the mean return (since every stock yields the same dividend). In ecological systems by contrast, larger populations exhibit lower variability than we would expect from proportional scaling.  Such mean-variance scaling is common across ecological systems and predicts that the temporal variance of individual components (2) increases with the mean value () according to a power-law relationship with exponent z<2 (38, 55). Using the mean-variance exponent fit to the sampled reserves (z=1.87), we predict the average recruitment contribution and variance of a single reserve with a mean output equal to the sum of the mean outputs of the four individual reserves. We compare this predicted variance of this hypothetical single reserve σ_T^2=0.036 to the observed variance of the contributions made by the portfolio of four reserves σ_P^2=0.011, to calculate the strength of the connectivity portfolio effect. We analysed the sensitivity of our results to the definition of cohorts, and found that the results were almost identical.
+We correct our estimates of the portfolio effect by accounting for the natural scale-dependence of population processes. In financial systems, the variance in returns scales linearly with the mean return (since every stock yields the same dividend). In ecological systems by contrast, larger populations exhibit lower variability than we would expect from proportional scaling.  Such mean-variance scaling is common across ecological systems and predicts that the temporal variance of individual components ($\sigma^2$) increases with the mean value ($\mu$) according to a power-law relationship with exponent $z\le2$ (38, 55). Using the mean-variance exponent fit to the sampled reserves (z=1.87), we predict the average recruitment contribution and variance of a single reserve with a mean output equal to the sum of the mean outputs of the four individual reserves. We compare the predicted coefficient of variation of this hypothetical single reserve ($CV_{Total} = 0.459$) to the observed coefficient of variation of the contributions made by the portfolio of four reserves ($CV_{Total} = 0.256$), to calculate the strength of the connectivity portfolio effect. We analysed the sensitivity of our results to the definition of cohorts, and found that the results were almost identical.
 
-```{r Mean-Variance portfolio effect}
+```{r Mean-Variance portfolio effect, message=F}
 #mean, variance and coefficient of variation in the local recruitment contribution of individual reserves
 var.reef = rec.contribution.1 %>% 
   select(Cohort, Reef, LRC) %>% 
@@ -140,7 +149,7 @@ var.sum$MV.PE <- var.sum$cv / var.sum$cv_portfolio
 var.sum$vjust <- sign(var.sum$var - var.sum$exp.var)*-1.7 
 ```
 
-```{r Figure 3A}
+```{r Figure 3A, message=F}
 CPE.plot <- ggplot(var.reef, aes(y = var, x = mean)) + 
   geom_segment(data = var.sum, aes(x=mean,xend=mean,y=var,yend=exp.var)) +
   geom_text(data = var.sum, aes(label=round(MV.PE,1),vjust=vjust), size = 2.5) +
@@ -163,14 +172,14 @@ CPE.plot <- ggplot(var.reef, aes(y = var, x = mean)) +
         legend.spacing.x = unit(1.0, 'mm')) + 
   scale_x_continuous(trans='log10', breaks = c(0.1,0.3,0.5)) +
   scale_y_continuous(trans='log10')
-
-CPE.plot
 ```
 
-##Bootstrap resampling protocol
-A bootstrap resampling protocol estimates the volatility in the recruitment contribution of an arbitrary number of reserves. First, we create a set of $n$ reserves by randomly resampling (with replacement) from the observed recruitment contribution timeseries of the reserves in the Keppel Islands (1≤$n$≤20). We repeat this procedure 100 times for each value of $n$ to estimate the mean and standard deviation of the coefficient of variation (CV). This method assumes that recruitment timeseries from additional reserves would have similar correlation structure to those observed in the Keppel Islands.
+## Bootstrap resampling protocol
 
-```{r bootstrap resampling protocol}
+A bootstrap resampling protocol estimates the volatility in the recruitment contribution of an arbitrary number of reserves. First, we create a set of $n$ reserves by randomly resampling (with replacement) from the observed recruitment contribution timeseries of the reserves in the Keppel Islands ($1\le n \le20$). We repeat this procedure 100 times for each value of $n$ to estimate the mean and standard deviation of the coefficient of variation (CV). This method assumes that recruitment timeseries from additional reserves would have similar correlation structure to those observed in the Keppel Islands.
+
+
+```{r bootstrap resampling protocol, message=F}
 c.var = rec.contribution.1 %>% 
   select(Cohort, Reef, LRC)
 
@@ -232,7 +241,7 @@ volatility.plot = ggplot(dat.melt.2, aes(y = mean.cov, x = n.res)) +
 
 
 
-```{r Figure 3}
+```{r Figure 3, message=F}
 ggarrange(CPE.plot,volatility.plot, nrow =2, ncol = 1, align = "v", labels = c("A", "B"), font.label = list(family = "Helvetica", colour = "black", size =9))
 ggsave("Figure3.pdf", height = 90, width = 49, units = "mm", dpi = 1000)
 ```
