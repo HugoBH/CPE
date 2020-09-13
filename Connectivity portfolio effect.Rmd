@@ -103,6 +103,15 @@ Reserve.performance.plot <- ggplot(rec.contribution.2, aes(y = LRC, x = Reef)) +
 #Figure 2
 ggarrange(Recruitment.plot,  Reserve.performance.plot, nrow =1, ncol = 2, align = "h", labels = c("A", "B"), widths = c(1, 1), font.label = list(family = "Helvetica", colour = "black", size =9))
 ggsave("Figure2.pdf", height = 57, width = 114, units = "mm", dpi = 1000)
+
+```
+
+```{r}
+ggarrange(Recruitment.plot + theme(plot.margin = unit(c(2,1,0,6), "mm")),  
+          Reserve.performance.plot + theme(plot.margin = unit(c(2,1,0,6), "mm")), 
+          nrow =2, ncol = 1, align = "v", labels = c("A", "B"), font.label = list(family = "Helvetica", colour = "black", size =9))
+ggsave("Figure2_tall.pdf", height = 90, width = 49, units = "mm", dpi = 1000)
+
 ```
 
 
